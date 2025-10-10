@@ -1,5 +1,7 @@
 # rainy_days
 
+https://github.com/user-attachments/assets/3e0549f2-3de8-4ab0-8a6c-4310dbb388cc
+
 Run options
 ```
 Default: 
@@ -22,12 +24,4 @@ Example JSON Structure for configuration file
 }
 
 ```
-
-Default ASCII:
-
-https://github.com/user-attachments/assets/0fdfed5d-0c78-4ea2-bced-ddeef770c5b4
-
-Configured ASCII:
-
-https://github.com/user-attachments/assets/c9f8d0ed-9241-4cf4-acbf-23b01235a2d5
 
