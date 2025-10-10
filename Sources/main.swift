@@ -22,29 +22,82 @@ let rainColors: [String] = [
     "38;5;205m", "38;5;206m",
 ]
 
+let asciiArtColor: String = "38;2;77;140;231m"
 let asciiArt: String = """
             ════════
          ════      ═══
-       ═══       ══
-      ═         ══
+       ═══       ══   
+      ═         ══    
      ══        ═        ═════
     ══       ══       ═══   ══
     ═       ═══       ═══  ═══
-    ═      ══  ═══       ═══
-    ══     ═     ════  ══════
+    ═      ══  ═══       ═══  
+    ══     ═     ════  ══════ 
      ═══  ═          ═══     ═══
        ════           ═       ═══
          ══           ══      ═ ═
-                       ══     ═
-                        ═      ═
-                        ═      ═
+                       ══     ═  
+                        ═      ═ 
+                        ═      ═  
     """
 
 var terminalSize = getTerminalSize()
 var rainDrops: [RainDrop] = initializeDrops()
 
+func prepTerminal() {
+    print(hideCursor + clearScreen + homeCursor + resetColor)
+}
+
+func restoreTerminal() {
+    print(showCursor + resetColor)
+}
+
+func parseInitialFile(filePath: String) -> Configuration {
+    let fileName = (filePath as NSString).lastPathComponent
+
+    guard filePath.hasSuffix(".json") else {
+        Logger.logParseError(
+            ParseError.invalidFilePath("Requires JSON file: \(filePath)"))
+        restoreTerminal()
+        exit(EXIT_FAILURE)
+    }
+
+    do {
+        let fileURL = URL(fileURLWithPath: filePath)
+        let fileData = try Data(contentsOf: fileURL)
+        Logger.logInfo("Successfully read data from \(fileName)")
+        do {
+            let decoder = JSONDecoder()
+            let config = try decoder.decode(Configuration.self, from: fileData)
+            Logger.logInfo("Successfully decoded JSON from \(fileName)")
+            return config
+        } catch {
+            Logger.logParseError(
+                ParseError.jsonParsingError(
+                    "Failed to decode JSON from \(fileName): \(error.localizedDescription)"))
+            restoreTerminal()
+            exit(EXIT_FAILURE)
+        }
+    } catch {
+        Logger.logParseError(
+            ParseError.fileNotFound("File not found at path: \(filePath)"))
+        restoreTerminal()
+        exit(EXIT_FAILURE)
+    }
+}
+
+func getTerminalSize() -> (width: Int, height: Int) {
+    var size: winsize = winsize()
+
+    if ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) != 0 {
+        return (80, 24)
+    }
+
+    return (Int(size.ws_col), Int(size.ws_row))
+}
+
 @MainActor func renderAsciiArt(_ config: Configuration?) {
-    let color: String;
+    let color: String
 
     if let artColor = config?.artColor {
         color = artColor
@@ -62,63 +115,11 @@ var rainDrops: [RainDrop] = initializeDrops()
         if yPosition < 0 { continue }
 
         print(
-            "\(escape)\(color)\(escape)\(yPosition);\(xPosition)H\(line)\(resetColor)")
+            "\(escape)\(asciiArtColor)\(escape)\(yPosition);\(xPosition)H\(line)\(resetColor)")
         print(
             "\(escape)\(color)\(escape)\(getTerminalSize().height);\(xPosition)H                    ═      ═",
             terminator: "")
     }
-}
-
-func parseInitialFile(filePath: String) -> Configuration {
-    let fileName = (filePath as NSString).lastPathComponent
-
-    guard filePath.hasSuffix(".json") else {
-        Logger.logParseError(
-            ParseError.invalidFilePath("Requires JSON file: \(filePath)"))
-        cleanTerminal()
-        exit(EXIT_FAILURE)
-    }
-
-    do {
-        let fileURL = URL(fileURLWithPath: filePath)
-        let fileData = try Data(contentsOf: fileURL)
-        Logger.logInfo("Successfully read data from \(fileName)")
-        do {
-            let decoder = JSONDecoder()
-            let config = try decoder.decode(Configuration.self, from: fileData)
-            Logger.logInfo("Successfully decoded JSON from \(fileName)")
-            return config
-        } catch {
-            Logger.logParseError(
-                ParseError.jsonParsingError(
-                    "Failed to decode JSON from \(fileName): \(error.localizedDescription)"))
-            cleanTerminal()
-            exit(EXIT_FAILURE)
-        }
-    } catch {
-        Logger.logParseError(
-            ParseError.fileNotFound("File not found at path: \(filePath)"))
-        cleanTerminal()
-        exit(EXIT_FAILURE)
-    }
-}
-
-func prepTerminal() {
-    print(hideCursor + clearScreen + homeCursor + resetColor)
-}
-
-func cleanTerminal() {
-    print(showCursor + clearScreen + homeCursor + resetColor)
-}
-
-func getTerminalSize() -> (width: Int, height: Int) {
-    var size: winsize = winsize()
-
-    if ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) != 0 {
-        return (80, 24)
-    }
-
-    return (Int(size.ws_col), Int(size.ws_row))
 }
 
 @MainActor func initializeDrops() -> [RainDrop] {
@@ -175,24 +176,19 @@ func getTerminalSize() -> (width: Int, height: Int) {
     }
 }
 
-signal(
-    SIGWINCH,
-    { _ in
-        terminalSize = getTerminalSize()
-    })
-
-signal(
-    SIGINT,
-    { _ in
-        prepTerminal()
-        exit(0)
-    })
-
 @MainActor func beginRain() {
     var config: Configuration?
     if CommandLine.arguments.contains("-config") {
-        let configFilePath = CommandLine.arguments[
-            CommandLine.arguments.firstIndex(of: "-config")! + 1]
+        guard let configIndex = CommandLine.arguments.firstIndex(of: "-config"),
+            CommandLine.arguments.count > configIndex + 1,
+            CommandLine.arguments[configIndex + 1] != "-ascii"
+        else {
+            Logger.logParseError(
+                ParseError.invalidFilePath("No valid file path provided after -config"))
+            restoreTerminal()
+            exit(EXIT_FAILURE)
+        }
+        let configFilePath = CommandLine.arguments[configIndex + 1]
         config = parseInitialFile(filePath: configFilePath)
     }
 
@@ -203,7 +199,7 @@ signal(
     ) { _ in
         DispatchQueue.main.async {
             animateFrame(config)
-            if CommandLine.arguments.contains("--ascii") {
+            if CommandLine.arguments.contains("-ascii") {
                 renderAsciiArt(config)
             }
         }
@@ -211,5 +207,18 @@ signal(
 
     RunLoop.current.run()
 }
+
+signal(
+    SIGWINCH,
+    { _ in
+        terminalSize = getTerminalSize()
+    })
+
+signal(
+    SIGINT,
+    { _ in
+        restoreTerminal()
+        exit(0)
+    })
 
 beginRain()
