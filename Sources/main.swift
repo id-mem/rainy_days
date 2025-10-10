@@ -102,7 +102,7 @@ func getTerminalSize() -> (width: Int, height: Int) {
     if let artColor = config?.artColor {
         color = artColor
     } else {
-        color = ""
+        color = asciiArtColor
     }
 
     let lines = asciiArt.components(separatedBy: .newlines)
@@ -115,9 +115,9 @@ func getTerminalSize() -> (width: Int, height: Int) {
         if yPosition < 0 { continue }
 
         print(
-            "\(escape)\(asciiArtColor)\(escape)\(yPosition);\(xPosition)H\(line)\(resetColor)")
+            "\(escape)\(color)\(escape)\(yPosition);\(xPosition)H\(line)\(resetColor)")
         print(
-            "\(escape)\(asciiArtColor)\(escape)\(getTerminalSize().height);\(xPosition)H                    ═      ═ ",
+            "\(escape)\(color)\(escape)\(getTerminalSize().height);\(xPosition)H                    ═      ═ ",
             terminator: "")
     }
 }
