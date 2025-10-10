@@ -5,10 +5,14 @@ https://github.com/user-attachments/assets/0fdfed5d-0c78-4ea2-bced-ddeef770c5b4
 Run options
 ```
 Default: 
-./rainy_days
+rainy_days
+
+Arguments:
+-config <path>
+-ascii
 
 Configured:
-./rainy_days -config <path> --ascii
+rainy_days -config <path> -ascii
 ```
 
 Example JSON Structure for configuration file
