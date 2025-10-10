@@ -117,7 +117,7 @@ func getTerminalSize() -> (width: Int, height: Int) {
         print(
             "\(escape)\(asciiArtColor)\(escape)\(yPosition);\(xPosition)H\(line)\(resetColor)")
         print(
-            "\(escape)\(color)\(escape)\(getTerminalSize().height);\(xPosition)H                    ═      ═",
+            "\(escape)\(asciiArtColor)\(escape)\(getTerminalSize().height);\(xPosition)H                    ═      ═ ",
             terminator: "")
     }
 }
